@@ -1,27 +1,25 @@
-const canvas = document.querySelector('#tide');
-const context = canvas.getContext('2d', { alpha: false });
-const opening = document.querySelector('#opening');
+const canvas = document.querySelector('#water');
+const ctx = canvas.getContext('2d', { alpha: false });
+const fish = document.querySelector('#fish');
+const welcome = document.querySelector('#welcome');
 const enterButton = document.querySelector('#enter-button');
-const resetButton = document.querySelector('#reset-button');
-const soundButton = document.querySelector('#sound-button');
-const statusText = document.querySelector('#status-text');
-const statusDot = document.querySelector('.status-dot');
-const clock = document.querySelector('#clock');
+const quietButton = document.querySelector('#quiet-button');
+const stateLabel = document.querySelector('#state-label');
+const counter = document.querySelector('#counter');
 
-const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const state = {
   width: 0,
   height: 0,
   dpr: Math.min(window.devicePixelRatio || 1, 2),
   started: false,
-  lastTime: 0,
-  startTime: 0,
-  lastInteraction: 0,
-  pointer: { x: 0.5, y: 0.54, active: false },
-  drift: { x: 0, y: 0 },
-  waves: [],
-  motes: [],
-  audio: { context: null, master: null, oscillator: null, enabled: false }
+  startedAt: 0,
+  lastFrame: 0,
+  lastTouch: 0,
+  pointer: { x: 0.54, y: 0.5, targetX: 0.54, targetY: 0.5 },
+  tilt: { x: 0, y: 0 },
+  ripples: [],
+  motes: []
 };
 
 function resize() {
@@ -29,233 +27,184 @@ function resize() {
   state.height = window.innerHeight;
   canvas.width = Math.round(state.width * state.dpr);
   canvas.height = Math.round(state.height * state.dpr);
-  canvas.style.width = `${state.width}px`;
-  canvas.style.height = `${state.height}px`;
-  context.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
-  createMotes();
-}
-
-function createMotes() {
-  const amount = Math.min(210, Math.max(105, Math.round((state.width * state.height) / 6200)));
-  state.motes = Array.from({ length: amount }, () => ({
+  ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+  state.motes = Array.from({ length: Math.max(80, Math.min(180, Math.floor(state.width * state.height / 7200))) }, () => ({
     x: Math.random() * state.width,
     y: Math.random() * state.height,
-    z: 0.25 + Math.random() * 0.9,
+    r: 0.3 + Math.random() * 1.1,
     phase: Math.random() * Math.PI * 2,
-    hue: 184 + Math.random() * 34
+    speed: 0.25 + Math.random() * 0.75
   }));
 }
 
-function addWave(x, y, intensity = 1) {
+function addRipple(x, y, power = 1) {
   const now = performance.now();
-  const normalizedX = Math.max(0, Math.min(1, x / state.width));
-  const normalizedY = Math.max(0, Math.min(1, y / state.height));
-  state.pointer = { x: normalizedX, y: normalizedY, active: true };
-  state.lastInteraction = now;
-  state.waves.push({ x, y, born: now, intensity, seed: Math.random() * 100 });
-  if (state.waves.length > 22) state.waves.shift();
-  emitTone(intensity);
+  state.ripples.push({ x, y, power, born: now, seed: Math.random() * 90 });
+  if (state.ripples.length > 16) state.ripples.shift();
+  state.lastTouch = now;
+  stateLabel.textContent = 'WATER / LISTENING';
 }
 
 function calm() {
-  state.waves = state.waves.slice(-2).map((wave) => ({ ...wave, born: performance.now() - 2500 }));
-  state.lastInteraction = 0;
-  statusText.textContent = '고요를 회복하는 중';
-  statusDot.classList.remove('active');
+  const now = performance.now();
+  state.ripples = state.ripples.slice(-2).map((ripple) => ({ ...ripple, born: now - 3200 }));
+  state.lastTouch = 0;
+  stateLabel.textContent = 'WATER / RESTING';
 }
 
 function drawBackground(time) {
-  const px = state.pointer.x * state.width + state.drift.x * state.width * 0.18;
-  const py = state.pointer.y * state.height + state.drift.y * state.height * 0.18;
-  const breathing = 0.07 + Math.sin(time * 0.00023) * 0.025;
-  const gradient = context.createRadialGradient(px, py, 0, px, py, Math.max(state.width, state.height) * 0.85);
-  gradient.addColorStop(0, `rgba(19, 65, 94, ${breathing})`);
-  gradient.addColorStop(0.38, 'rgba(5, 25, 45, 0.09)');
-  gradient.addColorStop(1, 'rgba(1, 5, 14, 0.16)');
-  context.fillStyle = gradient;
-  context.fillRect(0, 0, state.width, state.height);
+  const x = state.pointer.x * state.width;
+  const y = state.pointer.y * state.height;
+  const gradient = ctx.createRadialGradient(x, y, 0, x, y, Math.max(state.width, state.height) * 0.75);
+  gradient.addColorStop(0, '#0b3270');
+  gradient.addColorStop(0.44, '#082557');
+  gradient.addColorStop(1, '#041229');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, state.width, state.height);
+
+  ctx.strokeStyle = 'rgba(236, 207, 154, 0.055)';
+  ctx.lineWidth = 1;
+  const spacing = Math.max(46, Math.round(state.width / 16));
+  const drift = Math.sin(time * 0.00018) * 8;
+  for (let xLine = -spacing; xLine < state.width + spacing; xLine += spacing) {
+    ctx.beginPath();
+    ctx.moveTo(xLine + drift, 0);
+    ctx.lineTo(xLine - drift, state.height);
+    ctx.stroke();
+  }
+}
+
+function drawWaterThreads(time) {
+  ctx.lineWidth = 0.65;
+  for (let line = 0; line < 12; line += 1) {
+    const baseY = state.height * (0.18 + line * 0.065);
+    ctx.beginPath();
+    for (let x = -10; x <= state.width + 10; x += 9) {
+      const pull = Math.exp(-Math.abs(x - state.pointer.x * state.width) / (state.width * 0.28));
+      const y = baseY + Math.sin(x * 0.018 + time * 0.0004 + line) * (5 + pull * 7) + state.tilt.y * line * 0.6;
+      if (x < 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = `rgba(183, 218, 223, ${0.035 + line * 0.003})`;
+    ctx.stroke();
+  }
 }
 
 function drawMotes(time, delta) {
   for (const mote of state.motes) {
-    const stream = Math.sin(time * 0.0003 + mote.phase + mote.y * 0.007) * 0.2;
-    mote.x += (stream + state.drift.x * 0.42) * mote.z * delta * 0.025;
-    mote.y += (Math.cos(time * 0.00021 + mote.phase + mote.x * 0.004) * 0.15 + state.drift.y * 0.28) * mote.z * delta * 0.025;
-    if (mote.x < -8) mote.x = state.width + 8;
-    if (mote.x > state.width + 8) mote.x = -8;
-    if (mote.y < -8) mote.y = state.height + 8;
-    if (mote.y > state.height + 8) mote.y = -8;
-    const shimmer = 0.09 + (Math.sin(time * 0.0011 + mote.phase) + 1) * 0.055;
-    context.fillStyle = `hsla(${mote.hue}, 90%, 78%, ${shimmer})`;
-    context.beginPath();
-    context.arc(mote.x, mote.y, mote.z * 0.7, 0, Math.PI * 2);
-    context.fill();
+    mote.x += (Math.sin(time * 0.00031 + mote.phase) + state.tilt.x) * mote.speed * delta * 0.018;
+    mote.y += Math.cos(time * 0.00023 + mote.phase) * mote.speed * delta * 0.01;
+    if (mote.x < -5) mote.x = state.width + 5;
+    if (mote.x > state.width + 5) mote.x = -5;
+    if (mote.y < -5) mote.y = state.height + 5;
+    if (mote.y > state.height + 5) mote.y = -5;
+    ctx.fillStyle = `rgba(245, 220, 166, ${0.08 + (Math.sin(time * 0.001 + mote.phase) + 1) * 0.05})`;
+    ctx.beginPath();
+    ctx.arc(mote.x, mote.y, mote.r, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
 
-function drawWave(wave, time) {
-  const age = (time - wave.born) / 1000;
-  if (age < 0 || age > 8.5) return false;
-  const progress = 1 - Math.exp(-age * 1.35);
-  const maxRadius = Math.hypot(state.width, state.height) * 0.44;
-  const radius = 4 + progress * maxRadius * wave.intensity;
-  const alpha = Math.max(0, (1 - age / 8.5) ** 1.75) * 0.35 * wave.intensity;
-  const rings = reducedMotion ? 2 : 4;
+function drawRipple(ripple, time) {
+  const age = (time - ripple.born) / 1000;
+  if (age > 6.8) return false;
+  const spread = 1 - Math.exp(-age * 1.16);
+  const radius = (16 + spread * Math.max(state.width, state.height) * 0.54) * ripple.power;
+  const opacity = Math.pow(1 - age / 6.8, 1.75) * 0.34;
+  const ringCount = prefersReducedMotion ? 2 : 4;
 
-  for (let ring = 0; ring < rings; ring += 1) {
-    const offset = ring * 24 + Math.sin(age * 2 + wave.seed + ring) * 5;
-    context.beginPath();
-    const wobble = 1.5 + ring * 0.65;
-    for (let step = 0; step <= 90; step += 1) {
-      const angle = (step / 90) * Math.PI * 2;
-      const noise = Math.sin(angle * 3 + wave.seed + age * 1.8) * wobble + Math.sin(angle * 7 - age) * wobble * 0.45;
-      const x = wave.x + Math.cos(angle) * (radius + offset + noise);
-      const y = wave.y + Math.sin(angle) * (radius + offset + noise) * 0.46;
-      if (step === 0) context.moveTo(x, y); else context.lineTo(x, y);
+  for (let ring = 0; ring < ringCount; ring += 1) {
+    const innerRadius = radius + ring * 24;
+    ctx.beginPath();
+    for (let point = 0; point <= 100; point += 1) {
+      const angle = point / 100 * Math.PI * 2;
+      const wobble = Math.sin(angle * 4 + ripple.seed + age * 2.3) * (2.6 + ring) + Math.cos(angle * 7 - age) * 1.8;
+      const x = ripple.x + Math.cos(angle) * (innerRadius + wobble);
+      const y = ripple.y + Math.sin(angle) * (innerRadius * 0.39 + wobble);
+      if (point === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
-    context.strokeStyle = `hsla(${190 + ring * 8}, 95%, 79%, ${alpha * (1 - ring / (rings + 1))})`;
-    context.lineWidth = Math.max(0.35, 1.15 - age * 0.08 - ring * 0.12);
-    context.stroke();
+    ctx.strokeStyle = `rgba(245, 222, 174, ${opacity * (1 - ring * 0.16)})`;
+    ctx.lineWidth = 1.15 - ring * 0.15;
+    ctx.stroke();
   }
-
-  const glow = context.createRadialGradient(wave.x, wave.y, 0, wave.x, wave.y, radius * 0.72);
-  glow.addColorStop(0, `hsla(194, 90%, 74%, ${alpha * 0.19})`);
-  glow.addColorStop(1, 'rgba(25, 120, 180, 0)');
-  context.fillStyle = glow;
-  context.fillRect(wave.x - radius, wave.y - radius, radius * 2, radius * 2);
   return true;
 }
 
-function draw(time) {
-  const delta = Math.min(40, time - state.lastTime || 16.7);
-  state.lastTime = time;
-  context.fillStyle = 'rgba(2, 7, 17, 0.06)';
-  context.fillRect(0, 0, state.width, state.height);
+function updateFish(time) {
+  const idle = Math.sin(time * 0.00026);
+  const x = (state.pointer.x - 0.54) * 24 + state.tilt.x * 9;
+  const y = (state.pointer.y - 0.5) * 18 + state.tilt.y * 8 + idle * 3;
+  const rotate = -17 + (state.pointer.x - 0.54) * 13 + state.tilt.x * 5;
+  fish.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) rotate(${rotate}deg)`;
+}
+
+function frame(time) {
+  const delta = Math.min(40, time - state.lastFrame || 16.7);
+  state.lastFrame = time;
+  state.pointer.x += (state.pointer.targetX - state.pointer.x) * 0.042;
+  state.pointer.y += (state.pointer.targetY - state.pointer.y) * 0.042;
   drawBackground(time);
+  drawWaterThreads(time);
   drawMotes(time, delta);
-  state.waves = state.waves.filter((wave) => drawWave(wave, time));
+  state.ripples = state.ripples.filter((ripple) => drawRipple(ripple, time));
+  updateFish(time);
 
   if (state.started) {
-    const elapsed = Math.floor((time - state.startTime) / 1000);
-    clock.textContent = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`;
-    const quietFor = time - state.lastInteraction;
-    if (quietFor > 5200 && state.lastInteraction !== 0) {
-      statusText.textContent = '고요를 듣는 중';
-      statusDot.classList.remove('active');
-      state.pointer.active = false;
+    const seconds = Math.floor((time - state.startedAt) / 1000);
+    counter.textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+    if (state.lastTouch && time - state.lastTouch > 4200) {
+      stateLabel.textContent = 'WATER / REMEMBERING';
     }
   }
-  requestAnimationFrame(draw);
+  requestAnimationFrame(frame);
 }
 
-function initializeAudio() {
-  if (state.audio.context) return;
-  const AudioContext = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContext) return;
-  const audioContext = new AudioContext();
-  const master = audioContext.createGain();
-  const oscillator = audioContext.createOscillator();
-  const lfo = audioContext.createOscillator();
-  const lfoGain = audioContext.createGain();
-  oscillator.type = 'sine';
-  oscillator.frequency.value = 53;
-  lfo.frequency.value = 0.045;
-  lfoGain.gain.value = 3.4;
-  master.gain.value = 0;
-  lfo.connect(lfoGain).connect(oscillator.frequency);
-  oscillator.connect(master).connect(audioContext.destination);
-  oscillator.start();
-  lfo.start();
-  state.audio = { context: audioContext, master, oscillator, enabled: false };
-}
-
-function toggleSound() {
-  initializeAudio();
-  if (!state.audio.context) return;
-  state.audio.enabled = !state.audio.enabled;
-  state.audio.context.resume();
-  state.audio.master.gain.cancelScheduledValues(state.audio.context.currentTime);
-  state.audio.master.gain.linearRampToValueAtTime(state.audio.enabled ? 0.043 : 0, state.audio.context.currentTime + 0.6);
-  soundButton.setAttribute('aria-pressed', String(state.audio.enabled));
-  soundButton.setAttribute('aria-label', state.audio.enabled ? '소리 끄기' : '소리 켜기');
-  statusText.textContent = state.audio.enabled ? '파동을 듣는 중' : '고요를 듣는 중';
-}
-
-function emitTone(intensity) {
-  if (!state.audio.enabled) return;
-  const audio = state.audio;
-  const now = audio.context.currentTime;
-  const gain = audio.context.createGain();
-  const oscillator = audio.context.createOscillator();
-  oscillator.type = 'sine';
-  oscillator.frequency.setValueAtTime(200 + intensity * 90, now);
-  oscillator.frequency.exponentialRampToValueAtTime(95, now + 1.4);
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.025 * intensity, now + 0.03);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.5);
-  oscillator.connect(gain).connect(audio.master);
-  oscillator.start(now);
-  oscillator.stop(now + 1.55);
-}
-
-function start() {
+function begin() {
   if (state.started) return;
   state.started = true;
-  state.startTime = performance.now();
-  state.lastInteraction = state.startTime;
-  opening.classList.add('is-gone');
-  addWave(state.width / 2, state.height / 2, 1.15);
-  statusText.textContent = '파동을 기다리는 중';
-  statusDot.classList.add('active');
-  requestMotionPermission();
+  state.startedAt = performance.now();
+  welcome.classList.add('is-hidden');
+  addRipple(state.width * 0.57, state.height * 0.53, 1.2);
+  requestMotion();
 }
 
-function requestMotionPermission() {
+function requestMotion() {
   if (typeof DeviceOrientationEvent === 'undefined') return;
+  const attach = () => window.addEventListener('deviceorientation', (event) => {
+    const targetX = Math.max(-1, Math.min(1, (event.gamma || 0) / 28));
+    const targetY = Math.max(-1, Math.min(1, (event.beta || 0) / 42));
+    state.tilt.x += (targetX - state.tilt.x) * 0.075;
+    state.tilt.y += (targetY - state.tilt.y) * 0.075;
+  }, true);
   if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-    DeviceOrientationEvent.requestPermission()
-      .then((result) => {
-        if (result === 'granted') window.addEventListener('deviceorientation', onOrientation, true);
-      })
-      .catch(() => {});
+    DeviceOrientationEvent.requestPermission().then((permission) => {
+      if (permission === 'granted') attach();
+    }).catch(() => {});
   } else {
-    window.addEventListener('deviceorientation', onOrientation, true);
+    attach();
   }
 }
 
-function onOrientation(event) {
-  if (!state.started || event.gamma === null) return;
-  state.drift.x += ((event.gamma || 0) / 35 - state.drift.x) * 0.06;
-  state.drift.y += ((event.beta || 0) / 45 - state.drift.y) * 0.06;
+function movePointer(event) {
+  state.pointer.targetX = Math.max(0, Math.min(1, event.clientX / state.width));
+  state.pointer.targetY = Math.max(0, Math.min(1, event.clientY / state.height));
 }
 
-let lastPointerWave = 0;
-function handlePointer(event) {
+window.addEventListener('pointermove', movePointer, { passive: true });
+window.addEventListener('pointerdown', (event) => {
   if (!state.started) return;
-  const now = performance.now();
-  if (event.type === 'pointermove' && now - lastPointerWave < 75) return;
-  lastPointerWave = now;
-  const intensity = event.pointerType === 'touch' ? 0.88 : 0.56;
-  addWave(event.clientX, event.clientY, intensity);
-  statusText.textContent = '당신의 흔적이 번지는 중';
-  statusDot.classList.add('active');
-}
-
-enterButton.addEventListener('click', start);
-canvas.addEventListener('pointerdown', handlePointer);
-canvas.addEventListener('pointermove', handlePointer);
-resetButton.addEventListener('click', calm);
-soundButton.addEventListener('click', toggleSound);
+  movePointer(event);
+  addRipple(event.clientX, event.clientY, event.pointerType === 'touch' ? 1 : 0.78);
+}, { passive: true });
 window.addEventListener('resize', resize);
 window.addEventListener('keydown', (event) => {
-  if (event.code === 'Space' && state.started) {
-    event.preventDefault();
-    addWave(state.width / 2, state.height / 2, 0.9);
-  }
-  if (event.key.toLowerCase() === 's') toggleSound();
+  if (!state.started || event.code !== 'Space') return;
+  event.preventDefault();
+  addRipple(state.width * 0.5, state.height * 0.52, 0.9);
 });
+enterButton.addEventListener('click', begin);
+quietButton.addEventListener('click', calm);
 
 resize();
-context.fillStyle = '#020711';
-context.fillRect(0, 0, state.width, state.height);
-requestAnimationFrame(draw);
+ctx.fillStyle = '#061632';
+ctx.fillRect(0, 0, state.width, state.height);
+requestAnimationFrame(frame);
