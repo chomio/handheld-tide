@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#020711" />
+    <meta name="description" content="손끝과 움직임으로 기억의 파동을 남기는 웹 기반 미디어 아트 작품" />
+    <title>손안의 조수 — Handheld Tide</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="artwork" aria-labelledby="art-title">
+      <canvas id="tide" aria-label="터치와 움직임에 반응하는 빛의 바다"></canvas>
+
+      <div class="grain" aria-hidden="true"></div>
+      <div class="vignette" aria-hidden="true"></div>
+
+      <header class="masthead" aria-label="작품 정보">
+        <p class="edition">DIGITAL STUDY · 01</p>
+        <h1 id="art-title">손안의 조수</h1>
+        <p class="subtitle">Handheld Tide</p>
+      </header>
+
+      <div class="status" aria-live="polite">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="status-text">고요를 듣는 중</span>
+      </div>
+
+      <div class="controls" aria-label="작품 제어">
+        <button id="sound-button" class="icon-button" type="button" aria-pressed="false" aria-label="소리 켜기">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4Zm12.5 2a4.5 4.5 0 0 0-2-3.74v7.48A4.5 4.5 0 0 0 16.5 12Z"/></svg>
+        </button>
+        <button id="reset-button" class="text-button" type="button">고요로</button>
+      </div>
+
+      <section id="opening" class="opening" aria-label="작품 시작">
+        <div class="opening-content">
+          <p class="opening-number">01 / 01</p>
+          <p class="opening-copy">손끝으로,<br />사라지는 것을 잠시 붙잡아 보세요.</p>
+          <button id="enter-button" class="enter-button" type="button">물결에 닿기 <span aria-hidden="true">↗</span></button>
+          <p id="motion-note" class="motion-note">화면을 만지거나, 마우스를 움직이거나, 기울여 보세요.</p>
+        </div>
+      </section>
+
+      <footer class="footnote">
+        <p>TOUCH / MOVE / WAIT</p>
+        <p id="clock">00:00</p>
+      </footer>
+    </main>
+    <script src="main.js"></script>
+  </body>
+</html>
