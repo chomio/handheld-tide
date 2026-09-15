@@ -74,9 +74,11 @@ h1 span { display: block; }
 h1 span + span { padding-left: clamp(33px, 5.6vw, 89px); color: #efc58e; }
 .english-title { margin: clamp(24px, 3.6vw, 46px) 0 0 4px; color: var(--whisper); font-family: Georgia, serif; font-size: 11px; font-style: italic; letter-spacing: 0.03em; }
 
-.fish-stage { inset: 0; z-index: 2; pointer-events: none; }
-.fish { position: absolute; top: 48%; left: 58%; width: min(58vw, 670px); transform: translate(-50%, -50%) rotate(-17deg); transform-origin: center; filter: drop-shadow(0 36px 32px rgba(0, 7, 25, 0.35)); will-change: transform; }
-.fish img { display: block; width: 100%; height: auto; user-select: none; }
+.fish-stage { inset: 0; z-index: 2; pointer-events: none; perspective: 1450px; transform-style: preserve-3d; }
+.fish { --glint-x: 50%; --glint-y: 32%; position: absolute; top: 48%; left: 58%; width: min(58vw, 670px); transform: translate3d(-50%, -50%, 0) rotateZ(-17deg); transform-origin: 51% 50%; transform-style: preserve-3d; filter: drop-shadow(0 36px 32px rgba(0, 7, 25, 0.35)); will-change: transform, filter; }
+.fish img { display: block; width: 100%; height: auto; user-select: none; transform: translateZ(32px); transform-style: preserve-3d; }
+.fish-glint { position: absolute; inset: 0; z-index: 1; display: block; background: radial-gradient(circle at var(--glint-x) var(--glint-y), rgba(255, 255, 246, 0.7) 0%, rgba(255, 244, 202, 0.26) 10%, transparent 31%); mix-blend-mode: screen; opacity: 0.72; pointer-events: none; transform: translateZ(36px); -webkit-mask: url('assets/celestial-carp.png') center / contain no-repeat; mask: url('assets/celestial-carp.png') center / contain no-repeat; }
+.fish-shadow { position: absolute; top: 64%; left: 61%; width: min(43vw, 530px); aspect-ratio: 3.1; border-radius: 50%; background: radial-gradient(ellipse, rgba(0, 4, 18, 0.52) 0%, rgba(0, 4, 18, 0.22) 38%, transparent 72%); filter: blur(14px); opacity: 0.43; transform: translate3d(-50%, -50%, -45px) rotateZ(-17deg); transform-style: preserve-3d; will-change: transform, opacity; }
 .halo { position: absolute; border: 1px solid rgba(247, 239, 219, 0.15); border-radius: 50%; transform: translate(-50%, -50%); }
 .halo-one { top: 51%; left: 60%; width: min(47vw, 560px); aspect-ratio: 1; }
 .halo-two { top: 53%; left: 61%; width: min(64vw, 770px); aspect-ratio: 1; border-color: rgba(247, 239, 219, 0.08); }
@@ -109,6 +111,7 @@ h1 span + span { padding-left: clamp(33px, 5.6vw, 89px); color: #efc58e; }
   .title-block { top: max(104px, 15vh); left: 24px; }
   h1 { font-size: clamp(52px, 17.2vw, 92px); line-height: 0.76; }
   .fish { top: 53%; left: 60%; width: 122vw; }
+  .fish-shadow { top: 68%; left: 62%; width: 88vw; }
   .halo-one { top: 55%; left: 63%; width: 92vw; }
   .halo-two { top: 55%; left: 63%; width: 118vw; }
   .annotation { right: 24px; bottom: max(80px, 12vh); }

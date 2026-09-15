@@ -1,6 +1,7 @@
 const canvas = document.querySelector('#water');
 const ctx = canvas.getContext('2d', { alpha: false });
 const fish = document.querySelector('#fish');
+const fishShadow = document.querySelector('#fish-shadow');
 const welcome = document.querySelector('#welcome');
 const enterButton = document.querySelector('#enter-button');
 const quietButton = document.querySelector('#quiet-button');
@@ -131,10 +132,22 @@ function drawRipple(ripple, time) {
 
 function updateFish(time) {
   const idle = Math.sin(time * 0.00026);
-  const x = (state.pointer.x - 0.54) * 24 + state.tilt.x * 9;
-  const y = (state.pointer.y - 0.5) * 18 + state.tilt.y * 8 + idle * 3;
-  const rotate = -17 + (state.pointer.x - 0.54) * 13 + state.tilt.x * 5;
-  fish.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) rotate(${rotate}deg)`;
+  const mouseX = Math.max(-1, Math.min(1, (state.pointer.x - 0.5) * 2));
+  const mouseY = Math.max(-1, Math.min(1, (state.pointer.y - 0.5) * 2));
+  const closeness = 1 - Math.min(1, Math.hypot(mouseX, mouseY));
+  const x = (state.pointer.x - 0.54) * 45 + state.tilt.x * 12;
+  const y = (state.pointer.y - 0.5) * 31 + state.tilt.y * 10 + idle * 4;
+  const depth = 16 + closeness * 38;
+  const rotateZ = -17 + mouseX * 10 + state.tilt.x * 5;
+  const rotateX = -mouseY * 9 + state.tilt.y * 5;
+  const rotateY = mouseX * 13 + state.tilt.x * 7;
+  const scale = 0.985 + closeness * 0.055;
+  fish.style.transform = `translate3d(calc(-50% + ${x}px), calc(-50% + ${y}px), ${depth}px) rotateZ(${rotateZ}deg) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(${scale})`;
+  fish.style.filter = `drop-shadow(${mouseX * -11}px ${34 + mouseY * 9}px ${30 + closeness * 12}px rgba(0, 7, 25, ${0.28 + closeness * 0.18}))`;
+  fish.style.setProperty('--glint-x', `${50 + mouseX * 28}%`);
+  fish.style.setProperty('--glint-y', `${35 + mouseY * 22}%`);
+  fishShadow.style.transform = `translate3d(calc(-50% + ${x * 0.36}px), calc(-50% + ${y * 0.2}px), -45px) rotateZ(${rotateZ * 0.18}deg) scaleX(${0.94 + closeness * 0.2}) scaleY(${0.72 + closeness * 0.12})`;
+  fishShadow.style.opacity = String(0.27 + closeness * 0.25);
 }
 
 function frame(time) {
