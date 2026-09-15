@@ -203,6 +203,7 @@ window.addEventListener('keydown', (event) => {
 });
 enterButton.addEventListener('click', begin);
 quietButton.addEventListener('click', calm);
+window.addEventListener('load', () => window.setTimeout(begin, 350), { once: true });
 
 resize();
 ctx.fillStyle = '#061632';
